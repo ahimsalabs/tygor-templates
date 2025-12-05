@@ -2,6 +2,8 @@
 
 Project templates for [tygor](https://github.com/ahimsalabs/tygor) - type-safe HTTP for Go + TypeScript.
 
+**Requirements:** Go 1.23+, Bun (or npm/pnpm)
+
 ## Quick Start
 
 ```bash
@@ -36,8 +38,3 @@ Each template includes:
 - **Frontend** with type-safe API client
 - **Hot reload** via `@tygor/vite-plugin`
 - **Zod validation** for runtime type checking
-
-## Requirements
-
-- Go 1.23+
-- Bun (or npm/pnpm)
