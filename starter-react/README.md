@@ -15,10 +15,25 @@ Open http://localhost:5173
 
 ## What's Included
 
-- **Go backend** with Query and Exec handlers
+- **Go backend** with Query, Exec, and Stream handlers
 - **React frontend** with type-safe API calls
 - **Type-safe RPC** - Go types generate TypeScript automatically
 - **Hot reload** - Edit Go or TypeScript, browser updates
+
+## The Example
+
+This starter demonstrates tygor's features:
+
+**Query** - GET requests, cacheable:
+- `System.Info` - Returns Go runtime stats
+- `Tasks.List` - Lists all tasks
+
+**Exec** - POST requests, mutations:
+- `Tasks.Create` - Creates a new task
+- `Tasks.Toggle` - Toggles task completion
+
+**Stream** - push-based server-sent events:
+- `System.InfoStream` - Streams runtime stats every second
 
 ## Scripts
 

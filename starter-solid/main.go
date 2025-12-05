@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"tygor.dev/tygor"
 	"tygor.dev/tygorgen"
@@ -23,9 +24,12 @@ var messageAtom = tygor.NewAtom(&MessageState{
 func SetupApp() *tygor.App {
 	app := tygor.NewApp()
 
-	svc := app.Service("Message")
-	svc.Register("State", messageAtom.Handler())
-	svc.Register("Set", tygor.Exec(SetMessage))
+	msg := app.Service("Message")
+	msg.Register("State", messageAtom.Handler())
+	msg.Register("Set", tygor.Exec(SetMessage))
+
+	timeSvc := app.Service("Time")
+	timeSvc.Register("Now", tygor.Stream(StreamTime))
 
 	return app
 }
@@ -49,6 +53,19 @@ func SetMessage(ctx context.Context, req *SetMessageParams) (*MessageState, erro
 		return newState
 	})
 	return newState, nil
+}
+
+// StreamTime sends the current time every second.
+func StreamTime(_ context.Context, _ tygor.Empty, stream tygor.StreamWriter[*TimeUpdate]) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := stream.Send(&TimeUpdate{Time: time.Now()}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func main() {

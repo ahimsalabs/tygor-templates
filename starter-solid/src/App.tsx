@@ -27,6 +27,7 @@ function formatError(err: unknown): string {
 
 export default function App() {
   const atom = useAtom(client.Message.State);
+  const time = useAtom(client.Time.Now({}));
   const [input, setInput] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
 
@@ -80,6 +81,14 @@ export default function App() {
       <p style={{ "font-size": "0.75rem", color: "#999", "margin-top": "2rem" }}>
         Open this page in multiple tabs - they all sync via the Atom!
       </p>
+
+      <Show when={time().data}>
+        {(data) => (
+          <div style={{ "margin-top": "2rem", "font-size": "0.875rem", color: "#666" }}>
+            Server time: {new Date(data().time).toLocaleTimeString()}
+          </div>
+        )}
+      </Show>
     </div>
   );
 }

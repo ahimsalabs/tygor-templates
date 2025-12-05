@@ -14,7 +14,7 @@ import (
 	"tygor.dev/tygor"
 	"tygor.dev/tygorgen"
 
-	"tygor.dev/examples/react/api"
+	"my-app/api"
 )
 
 // In-memory task store

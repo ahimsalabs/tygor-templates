@@ -11,6 +11,9 @@ bunx degit ahimsalabs/tygor-templates/starter-solid my-app
 # React
 bunx degit ahimsalabs/tygor-templates/starter-react my-app
 
+# With sqlc (database)
+bunx degit ahimsalabs/tygor-templates/starter-sqlc my-app
+
 # Then
 cd my-app
 bun install
@@ -21,8 +24,9 @@ bun dev
 
 | Template | Description |
 |----------|-------------|
-| `starter-solid` | Solid.js + Vite with Atoms (real-time sync) |
-| `starter-react` | React + Vite with Query/Exec handlers |
+| `starter-solid` | Solid.js + Vite with Atoms + Streams |
+| `starter-react` | React + Vite with Query/Exec/Stream |
+| `starter-sqlc` | Solid.js + Vite + sqlc (SQLite database) |
 
 ## What's Included
 

@@ -23,10 +23,14 @@ Open http://localhost:5173
 
 ## The Example
 
-This starter demonstrates a tygor **Atom** - server-side state that syncs to all connected clients in real-time:
+This starter demonstrates tygor's real-time features:
 
-- `Message.State` - An Atom that broadcasts the current message and set count
+**Atom** - server-side state that syncs to all connected clients:
+- `Message.State` - Broadcasts the current message and set count
 - `Message.Set` - Updates the message (validates 5-10 character length)
+
+**Stream** - push-based server-sent events:
+- `Time.Now` - Streams the current server time every second
 
 Open the app in multiple tabs - they all stay in sync!
 

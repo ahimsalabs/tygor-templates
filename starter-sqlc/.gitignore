@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.tygor/
+src/rpc/
+*.log
+data.sqlite.db

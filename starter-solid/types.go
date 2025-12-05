@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 // MessageState holds the current message and how many times it's been set.
 type MessageState struct {
 	// Message is the current message (5-10 characters).
@@ -11,4 +13,9 @@ type MessageState struct {
 // SetMessageParams contains the new message value.
 type SetMessageParams struct {
 	Message string `json:"message" validate:"required,min=5,max=10"`
+}
+
+// TimeUpdate is sent by the Time.Now stream every second.
+type TimeUpdate struct {
+	Time time.Time `json:"time"`
 }
