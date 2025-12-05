@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "gen": "GOPRIVATE=tygor.dev go mod tidy && go run tygor.dev/cmd/tygor@v0.8.3 gen ./src/rpc",
+    "gen": "GONOSUMDB=tygor.dev go mod tidy && GONOSUMDB=tygor.dev go run tygor.dev/cmd/tygor@v0.8.3 gen ./src/rpc",
     "postinstall": "bun run gen",
     "dev": "vite --clearScreen false",
     "build": "vite build",
