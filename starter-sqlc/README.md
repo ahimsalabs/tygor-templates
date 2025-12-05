@@ -35,7 +35,7 @@ This starter demonstrates tygor with sqlc:
 - `Tasks.Update` - Updates a task
 - `Tasks.Delete` - Deletes a task
 
-**Atom** - real-time sync:
+**LiveValue** - real-time sync:
 - `Tasks.Version` - Version counter, bumped on mutations (for optimistic updates)
 
 ## Scripts

@@ -1,13 +1,15 @@
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { tygor } from "@tygor/vite-plugin";
+// import basicSsl from "@vitejs/plugin-basic-ssl";
 
 export default defineConfig({
   plugins: [
+    // Uncomment for HTTPS (recommended for testing auth, cookies, etc.):
+    // basicSsl(),
     solid(),
     tygor({
       proxyPrefix: "/api",
-      // gen: true (default) - runs `tygor gen` to generate TypeScript types
       build: "go build -o ./.tygor/server .",
       buildOutput: "./.tygor/server",
       start: (port) => ({
@@ -17,9 +19,4 @@ export default defineConfig({
       rpcDir: "./src/rpc",
     }),
   ],
-  // Exclude local packages from Vite's dep optimization cache during development.
-  // Without this, changes to @tygor/client require manually clearing node_modules/.vite/
-  optimizeDeps: {
-    exclude: ["@tygor/client"],
-  },
 });

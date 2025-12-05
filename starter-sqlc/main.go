@@ -27,7 +27,7 @@ type Version struct {
 }
 
 // Version counter - bump on any mutation, clients refetch when it changes
-var versionAtom = tygor.NewAtom(&Version{Value: 0})
+var versionAtom = tygor.NewLiveValue(&Version{Value: 0})
 
 // [snippet:app-setup]
 

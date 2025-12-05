@@ -1,11 +1,12 @@
-// [snippet:vite-config]
-
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { tygor } from "@tygor/vite-plugin";
+// import basicSsl from "@vitejs/plugin-basic-ssl";
 
 export default defineConfig({
   plugins: [
+    // Uncomment for HTTPS (recommended for testing auth, cookies, etc.):
+    // basicSsl(),
     solid(),
     tygor({
       proxyPrefix: "/api",
@@ -13,7 +14,6 @@ export default defineConfig({
       pregen: "sqlc generate",
       // Watch SQL files and sqlc config in addition to Go files
       watch: ["**/*.go", "**/*.sql", "sqlc.yaml"],
-      // gen: true (default) - runs `tygor gen` to generate TypeScript types
       build: "go build -o ./.tygor/server .",
       buildOutput: "./.tygor/server",
       start: (port) => ({
@@ -23,8 +23,4 @@ export default defineConfig({
       rpcDir: "./src/rpc",
     }),
   ],
-  optimizeDeps: {
-    exclude: ["@tygor/client"],
-  },
 });
-// [/snippet:vite-config]

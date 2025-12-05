@@ -1,8 +1,10 @@
-import { useState, FormEvent } from "react";
+import { useState, useEffect, useCallback, FormEvent } from "react";
 import { createClient, ServerError, ValidationError } from "@tygor/client";
 import { registry } from "./rpc/manifest";
 import { schemaMap } from "./rpc/schemas.map.zod";
+import type { Task } from "./rpc/types";
 import { useAtom } from "./useAtom";
+import "./App.css";
 
 const client = createClient(registry, {
   baseUrl: "/api",
@@ -25,17 +27,61 @@ function formatError(err: unknown): string {
 }
 
 export default function App() {
-  const atom = useAtom(client.Message.State);
-  const time = useAtom(client.Time.Now({}));
-  const [input, setInput] = useState("");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSet = async (e: FormEvent) => {
+  // Subscribe to version changes - refetch when version bumps
+  const version = useAtom(client.Tasks.Version);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const result = await client.Tasks.List({});
+      setTasks(result);
+    } catch (err) {
+      setError(formatError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Refetch when version changes
+  useEffect(() => {
+    if (version.data?.value !== undefined) {
+      fetchTasks();
+    }
+  }, [version.data?.value, fetchTasks]);
+
+  const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    const t = title.trim();
+    if (!t) return;
     try {
-      await client.Message.Set({ message: input });
-      setInput("");
+      await client.Tasks.Create({ title: t });
+      setTitle("");
+    } catch (err) {
+      setError(formatError(err));
+    }
+  };
+
+  const handleToggle = async (task: Task) => {
+    try {
+      await client.Tasks.Toggle({ id: task.id });
+    } catch (err) {
+      setError(formatError(err));
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await client.Tasks.Delete({ id });
     } catch (err) {
       setError(formatError(err));
     }
@@ -43,47 +89,48 @@ export default function App() {
 
   return (
     <div>
-      <h1>Message Atom</h1>
+      <h1>Tygor Tasks</h1>
 
-      <div style={{ fontSize: "0.75rem", color: atom.isConnected ? "#16a34a" : "#ca8a04", marginBottom: "1rem" }}>
-        {atom.isConnected ? "●" : atom.isConnecting ? "○" : "◌"} {atom.status}
+      <div className={`status ${version.isConnected ? "connected" : "connecting"}`}>
+        {version.isConnected ? "●" : version.isConnecting ? "○" : "◌"} {version.status}
       </div>
 
-      {atom.data && (
-        <div style={{ marginBottom: "1rem" }}>
-          <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{atom.data.message}</div>
-          <div style={{ fontSize: "0.875rem", color: "#666" }}>
-            Set {atom.data.set_count} time{atom.data.set_count !== 1 ? "s" : ""}
-          </div>
+      <form onSubmit={handleCreate}>
+        <div className="form-group">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="What needs to be done?"
+          />
+          <button type="submit">Add</button>
         </div>
-      )}
-
-      <form onSubmit={handleSet}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="5-10 characters..."
-          minLength={5}
-          maxLength={10}
-        />
-        <button type="submit">Set</button>
       </form>
 
-      {error && (
-        <div style={{ color: "#dc2626", marginTop: "0.5rem", fontSize: "0.875rem" }}>
-          {error}
-        </div>
+      {error && <div className="error">{error}</div>}
+
+      {loading && <p className="hint">Loading...</p>}
+
+      <ul className="task-list">
+        {tasks.map((task) => (
+          <li key={task.id} className="task-item">
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => handleToggle(task)}
+            />
+            <span className={task.completed ? "completed" : ""}>{task.title}</span>
+            <button className="delete" onClick={() => handleDelete(task.id)}>×</button>
+          </li>
+        ))}
+      </ul>
+
+      {!loading && tasks.length === 0 && (
+        <p className="hint">No tasks yet. Add one above!</p>
       )}
 
-      <p style={{ fontSize: "0.75rem", color: "#999", marginTop: "2rem" }}>
-        Open this page in multiple tabs - they all sync via the Atom!
+      <p className="hint">
+        Open this page in multiple tabs - they all sync via the LiveValue!
       </p>
-
-      {time.data && (
-        <div style={{ marginTop: "2rem", fontSize: "0.875rem", color: "#666" }}>
-          Server time: {new Date(time.data.time).toLocaleTimeString()}
-        </div>
-      )}
     </div>
   );
 }

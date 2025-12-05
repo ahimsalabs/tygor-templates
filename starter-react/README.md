@@ -15,22 +15,23 @@ Open http://localhost:5173
 
 ## What's Included
 
-- **Go backend** with an Atom (real-time synced state) and a Stream
+- **Go backend** with in-memory task store and real-time invalidation
 - **React frontend** with reactive subscriptions
 - **Type-safe RPC** - Go types generate TypeScript automatically
 - **Hot reload** - Edit Go or TypeScript, browser updates
-- **Validation** - Server validates message length (5-10 chars)
 
 ## The Example
 
-This starter demonstrates tygor's real-time features:
+A simple todo list demonstrating tygor's real-time features:
 
-**Atom** - server-side state that syncs to all connected clients:
-- `Message.State` - Broadcasts the current message and set count
-- `Message.Set` - Updates the message (validates 5-10 character length)
+**Query/Exec** - standard CRUD:
+- `Tasks.List` - Lists all tasks
+- `Tasks.Create` - Creates a new task
+- `Tasks.Toggle` - Toggles task completion
+- `Tasks.Delete` - Deletes a task
 
-**Stream** - push-based server-sent events:
-- `Time.Now` - Streams the current server time every second
+**LiveValue** - real-time invalidation:
+- `Tasks.Version` - Bumps on any mutation; clients subscribe and refetch
 
 Open the app in multiple tabs - they all stay in sync!
 
@@ -54,12 +55,12 @@ The `@tygor/vite-plugin` handles the dev workflow:
 
 ```
 .
-├── main.go            # Go server with Atom + handlers
+├── main.go            # Go server with handlers
 ├── types.go           # Go types (generate TypeScript from these)
 ├── src/
 │   ├── rpc/           # Generated TypeScript (don't edit)
 │   ├── App.tsx        # Main React component
-│   ├── useAtom.ts     # React hook for Atom/Stream subscriptions
+│   ├── useAtom.ts     # React hook for LiveValue subscriptions
 │   └── main.tsx       # Entry point
 └── vite.config.js     # Vite + tygor plugin config
 ```
@@ -72,6 +73,6 @@ The `@tygor/vite-plugin` handles the dev workflow:
    - `tygor.Query(Handler)` - GET requests, cacheable
    - `tygor.Exec(Handler)` - POST requests, mutations
    - `tygor.Stream(Handler)` - Server-sent events
-   - `atom.Handler()` - Real-time synced state
+   - `liveValue.Handler()` - Real-time synced state
 4. Types regenerate automatically on save
 5. Use in frontend: `client.Service.Method({ ... })`

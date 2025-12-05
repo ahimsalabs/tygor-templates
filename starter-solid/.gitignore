@@ -3,3 +3,4 @@ dist/
 .tygor/
 src/rpc/
 *.log
+my-app

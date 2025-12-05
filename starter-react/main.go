@@ -7,29 +7,38 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
+	"sync"
 
 	"tygor.dev/tygor"
 	"tygor.dev/tygorgen"
 )
 
-// Atom holding message state - subscribers get current value and updates
-var messageAtom = tygor.NewAtom(&MessageState{
-	Message:  "hello",
-	SetCount: 0,
-})
+// In-memory task store (slice preserves creation order)
+var (
+	tasks   []*Task
+	nextID  = 1
+	tasksMu sync.RWMutex
+)
+
+// Version livevalue - clients subscribe and refetch when it changes
+var version = tygor.NewLiveValue(&Version{Value: 0})
+
+func bumpVersion() {
+	version.Update(func(v *Version) *Version {
+		return &Version{Value: v.Value + 1}
+	})
+}
 
 // SetupApp configures the tygor application.
-// This export is used by `tygor gen` for type generation.
 func SetupApp() *tygor.App {
 	app := tygor.NewApp()
+	svc := app.Service("Tasks")
 
-	msg := app.Service("Message")
-	msg.Register("State", messageAtom.Handler())
-	msg.Register("Set", tygor.Exec(SetMessage))
-
-	timeSvc := app.Service("Time")
-	timeSvc.Register("Now", tygor.Stream(StreamTime))
+	svc.Register("List", tygor.Query(ListTasks))
+	svc.Register("Create", tygor.Exec(CreateTask))
+	svc.Register("Toggle", tygor.Exec(ToggleTask))
+	svc.Register("Delete", tygor.Exec(DeleteTask))
+	svc.Register("Version", version.Handler())
 
 	return app
 }
@@ -43,29 +52,53 @@ func TygorConfig(g *tygorgen.Generator) *tygorgen.Generator {
 		WithFlavor(tygorgen.FlavorZod)
 }
 
-func SetMessage(ctx context.Context, req *SetMessageParams) (*MessageState, error) {
-	var newState *MessageState
-	messageAtom.Update(func(state *MessageState) *MessageState {
-		newState = &MessageState{
-			Message:  req.Message,
-			SetCount: state.SetCount + 1,
-		}
-		return newState
-	})
-	return newState, nil
+func ListTasks(_ context.Context, _ tygor.Empty) ([]*Task, error) {
+	tasksMu.RLock()
+	defer tasksMu.RUnlock()
+	return tasks, nil
 }
 
-// StreamTime sends the current time every second.
-func StreamTime(_ context.Context, _ tygor.Empty, stream tygor.StreamWriter[*TimeUpdate]) error {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+func CreateTask(_ context.Context, p *CreateTaskParams) (*Task, error) {
+	tasksMu.Lock()
+	defer tasksMu.Unlock()
 
-	for range ticker.C {
-		if err := stream.Send(&TimeUpdate{Time: time.Now()}); err != nil {
-			return err
+	task := &Task{
+		ID:    nextID,
+		Title: p.Title,
+	}
+	tasks = append([]*Task{task}, tasks...)
+	nextID++
+
+	bumpVersion()
+	return task, nil
+}
+
+func ToggleTask(_ context.Context, p *ToggleTaskParams) (*Task, error) {
+	tasksMu.Lock()
+	defer tasksMu.Unlock()
+
+	for _, task := range tasks {
+		if task.ID == p.ID {
+			task.Completed = !task.Completed
+			bumpVersion()
+			return task, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("task %d not found", p.ID)
+}
+
+func DeleteTask(_ context.Context, p *DeleteTaskParams) (tygor.Empty, error) {
+	tasksMu.Lock()
+	defer tasksMu.Unlock()
+
+	for i, task := range tasks {
+		if task.ID == p.ID {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			bumpVersion()
+			return nil, nil
+		}
+	}
+	return nil, fmt.Errorf("task %d not found", p.ID)
 }
 
 func main() {

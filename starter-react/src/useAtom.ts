@@ -1,22 +1,30 @@
 import { useState, useEffect } from "react";
-import type { Atom, SubscriptionResult } from "@tygor/client";
+import type { LiveValue, SubscriptionResult } from "@tygor/client";
 
 /**
- * React hook for subscribing to a tygor Atom or Stream.
+ * React hook for subscribing to a tygor LiveValue or Stream.
  * Returns the current SubscriptionResult which includes data, status, and connection state.
  *
+ * The liveValue reference should remain stable across renders. Use useMemo if needed:
+ *
  * @example
- * const result = useAtom(client.Message.State);
- * if (result.data) {
- *   return <div>{result.data.message}</div>;
- * }
+ * // Stable reference - works fine
+ * const result = useLiveValue(client.Message.State);
+ *
+ * // Factory call - stabilize with useMemo
+ * const stream = useMemo(() => client.Time.Now(), []);
+ * const result = useLiveValue(stream);
  */
-export function useAtom<T>(atom: Atom<T>): SubscriptionResult<T> {
-  const [state, setState] = useState<SubscriptionResult<T>>(atom.getSnapshot());
+export function useLiveValue<T>(liveValue: LiveValue<T>): SubscriptionResult<T> {
+  const [state, setState] = useState<SubscriptionResult<T>>(() => liveValue.getSnapshot());
 
   useEffect(() => {
-    return atom.subscribe(setState);
-  }, [atom]);
+    const unsubscribe = liveValue.subscribe(setState);
+    return unsubscribe;
+  }, [liveValue]);
 
   return state;
 }
+
+// Alias for backwards compatibility
+export const useAtom = useLiveValue;

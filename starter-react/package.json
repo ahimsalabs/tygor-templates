@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "gen": "GONOSUMDB=tygor.dev go mod tidy && GONOSUMDB=tygor.dev go run tygor.dev/cmd/tygor@v0.8.3 gen ./src/rpc",
+    "gen": "go mod tidy && go run tygor.dev/cmd/tygor@v0.8.6 gen ./src/rpc",
     "postinstall": "bun run gen",
     "dev": "vite --clearScreen false",
     "build": "vite build",
@@ -12,15 +12,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tygor/client": "^0.8.3",
+    "@tygor/client": "^0.8.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@tygor/vite-plugin": "^0.8.3",
+    "@tygor/vite-plugin": "^0.8.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-react": "^4.3.0",
     "typescript": "^5.0.0",
     "vite": "^6.0.0"

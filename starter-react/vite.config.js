@@ -1,9 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { tygor } from "@tygor/vite-plugin";
+// import basicSsl from "@vitejs/plugin-basic-ssl";
 
 export default defineConfig({
   plugins: [
+    // Uncomment for HTTPS (recommended for testing auth, cookies, etc.):
+    // basicSsl(),
     react(),
     tygor({
       proxyPrefix: "/api",
@@ -16,7 +19,4 @@ export default defineConfig({
       rpcDir: "./src/rpc",
     }),
   ],
-  optimizeDeps: {
-    exclude: ["@tygor/client"],
-  },
 });
