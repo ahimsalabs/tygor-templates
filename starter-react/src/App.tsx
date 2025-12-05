@@ -1,10 +1,8 @@
-// [snippet:client-setup]
-
-import { useState, useEffect, FormEvent } from "react";
-import { createClient } from "@tygor/client";
+import { useState, FormEvent } from "react";
+import { createClient, ServerError, ValidationError } from "@tygor/client";
 import { registry } from "./rpc/manifest";
 import { schemaMap } from "./rpc/schemas.map.zod";
-import type { Task, RuntimeInfo } from "./rpc/types";
+import { useAtom } from "./useAtom";
 
 const client = createClient(registry, {
   baseUrl: "/api",
@@ -12,78 +10,80 @@ const client = createClient(registry, {
   validate: { request: true },
 });
 
-// [/snippet:client-setup]
-
-// [snippet:react-component]
+function formatError(err: unknown): string {
+  if (err instanceof ValidationError) {
+    const messages = err.issues.map((issue) => {
+      const path = issue.path?.join(".") ?? "";
+      return path ? `${path}: ${issue.message}` : issue.message;
+    });
+    return messages.join("; ");
+  }
+  if (err instanceof ServerError) {
+    return err.message;
+  }
+  return err instanceof Error ? err.message : "Unknown error";
+}
 
 export default function App() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTask, setNewTask] = useState("");
-  const [info, setInfo] = useState<RuntimeInfo | null>(null);
+  const atom = useAtom(client.Message.State);
+  const time = useAtom(client.Time.Now({}));
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchTasks = async () => {
-    setTasks(await client.Tasks.List());
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  useEffect(
-    () => client.System.InfoStream().subscribe((r) => setInfo(r.data ?? null)),
-    []
-  );
-
-  const handleCreate = async (e: FormEvent) => {
+  const handleSet = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newTask.trim()) return;
-    await client.Tasks.Create({ title: newTask });
-    setNewTask("");
-    fetchTasks();
-  };
-
-  const handleToggle = async (id: number) => {
-    await client.Tasks.Toggle({ id });
-    fetchTasks();
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    setError(null);
+    try {
+      await client.Message.Set({ message: input });
+      setInput("");
+    } catch (err) {
+      setError(formatError(err));
+    }
   };
 
   return (
     <div>
-      {info && (
-        <div className="info">
-          <strong>{info.version}</strong> | {info.num_goroutines} goroutines |{" "}
-          {formatBytes(info.memory.alloc)} alloc | {info.memory.num_gc} GC
+      <h1>Message Atom</h1>
+
+      <div style={{ fontSize: "0.75rem", color: atom.isConnected ? "#16a34a" : "#ca8a04", marginBottom: "1rem" }}>
+        {atom.isConnected ? "●" : atom.isConnecting ? "○" : "◌"} {atom.status}
+      </div>
+
+      {atom.data && (
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{atom.data.message}</div>
+          <div style={{ fontSize: "0.875rem", color: "#666" }}>
+            Set {atom.data.set_count} time{atom.data.set_count !== 1 ? "s" : ""}
+          </div>
         </div>
       )}
 
-      <h1>Tasks</h1>
-      <form onSubmit={handleCreate}>
+      <form onSubmit={handleSet}>
         <input
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-          placeholder="New task..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="5-10 characters..."
+          minLength={5}
+          maxLength={10}
         />
-        <button type="submit">Add</button>
+        <button type="submit">Set</button>
       </form>
-      <ul>
-        {tasks.map((task) => (
-          <li
-            key={task.id}
-            className={task.done ? "done" : ""}
-            onClick={() => handleToggle(task.id)}
-          >
-            {task.done ? "✓" : "○"} {task.title}
-          </li>
-        ))}
-      </ul>
+
+      {error && (
+        <div style={{ color: "#dc2626", marginTop: "0.5rem", fontSize: "0.875rem" }}>
+          {error}
+        </div>
+      )}
+
+      <p style={{ fontSize: "0.75rem", color: "#999", marginTop: "2rem" }}>
+        Open this page in multiple tabs - they all sync via the Atom!
+      </p>
+
+      {time.data && (
+        <div style={{ marginTop: "2rem", fontSize: "0.875rem", color: "#666" }}>
+          Server time: {new Date(time.data.time).toLocaleTimeString()}
+        </div>
+      )}
     </div>
   );
 }
-
-// [/snippet:react-component]

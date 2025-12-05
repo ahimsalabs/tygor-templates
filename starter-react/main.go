@@ -7,118 +7,29 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"runtime"
-	"sync"
 	"time"
 
 	"tygor.dev/tygor"
 	"tygor.dev/tygorgen"
-
-	"my-app/api"
 )
 
-// In-memory task store
-var (
-	tasks   = []*api.Task{}
-	tasksMu sync.Mutex
-	nextID  int32 = 1
-)
-
-func GetRuntimeInfo(ctx context.Context, req tygor.Empty) (*api.RuntimeInfo, error) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	return &api.RuntimeInfo{
-		Version:       runtime.Version(),
-		NumGoroutines: runtime.NumGoroutine(),
-		NumCPU:        runtime.NumCPU(),
-		Memory: api.MemoryStats{
-			Alloc:      m.Alloc,
-			TotalAlloc: m.TotalAlloc,
-			Sys:        m.Sys,
-			NumGC:      m.NumGC,
-		},
-	}, nil
-}
-
-func StreamRuntimeInfo(ctx context.Context, req tygor.Empty, stream tygor.StreamWriter[*api.RuntimeInfo]) error {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		info, err := GetRuntimeInfo(ctx, nil)
-		if err != nil {
-			return err
-		}
-		if err := stream.Send(info); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// [snippet:handlers collapse]
-
-func ListTasks(ctx context.Context, req *api.ListTasksParams) ([]*api.Task, error) {
-	tasksMu.Lock()
-	defer tasksMu.Unlock()
-
-	if req.ShowDone != nil && !*req.ShowDone {
-		filtered := []*api.Task{}
-		for _, t := range tasks {
-			if !t.Done {
-				filtered = append(filtered, t)
-			}
-		}
-		return filtered, nil
-	}
-	if tasks == nil {
-		return []*api.Task{}, nil
-	}
-	return tasks, nil
-}
-
-func CreateTask(ctx context.Context, req *api.CreateTaskParams) (*api.Task, error) {
-	tasksMu.Lock()
-	defer tasksMu.Unlock()
-
-	task := &api.Task{
-		ID:    nextID,
-		Title: req.Title,
-		Done:  false,
-	}
-	nextID++
-	tasks = append(tasks, task)
-	return task, nil
-}
-
-func ToggleTask(ctx context.Context, req *api.ToggleTaskParams) (*api.Task, error) {
-	tasksMu.Lock()
-	defer tasksMu.Unlock()
-
-	for _, t := range tasks {
-		if t.ID == req.ID {
-			t.Done = !t.Done
-			return t, nil
-		}
-	}
-	return nil, tygor.NewError(tygor.CodeNotFound, "task not found")
-}
-
-// [/snippet:handlers]
+// Atom holding message state - subscribers get current value and updates
+var messageAtom = tygor.NewAtom(&MessageState{
+	Message:  "hello",
+	SetCount: 0,
+})
 
 // SetupApp configures the tygor application.
 // This export is used by `tygor gen` for type generation.
 func SetupApp() *tygor.App {
 	app := tygor.NewApp()
 
-	system := app.Service("System")
-	system.Register("Info", tygor.Query(GetRuntimeInfo))
-	system.Register("InfoStream", tygor.Stream(StreamRuntimeInfo))
+	msg := app.Service("Message")
+	msg.Register("State", messageAtom.Handler())
+	msg.Register("Set", tygor.Exec(SetMessage))
 
-	tasksSvc := app.Service("Tasks")
-	tasksSvc.Register("List", tygor.Query(ListTasks))
-	tasksSvc.Register("Create", tygor.Exec(CreateTask))
-	tasksSvc.Register("Toggle", tygor.Exec(ToggleTask))
+	timeSvc := app.Service("Time")
+	timeSvc.Register("Now", tygor.Stream(StreamTime))
 
 	return app
 }
@@ -130,6 +41,31 @@ func TygorConfig(g *tygorgen.Generator) *tygorgen.Generator {
 		OptionalType("undefined").
 		WithDiscovery().
 		WithFlavor(tygorgen.FlavorZod)
+}
+
+func SetMessage(ctx context.Context, req *SetMessageParams) (*MessageState, error) {
+	var newState *MessageState
+	messageAtom.Update(func(state *MessageState) *MessageState {
+		newState = &MessageState{
+			Message:  req.Message,
+			SetCount: state.SetCount + 1,
+		}
+		return newState
+	})
+	return newState, nil
+}
+
+// StreamTime sends the current time every second.
+func StreamTime(_ context.Context, _ tygor.Empty, stream tygor.StreamWriter[*TimeUpdate]) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := stream.Send(&TimeUpdate{Time: time.Now()}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func main() {
