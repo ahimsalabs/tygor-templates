@@ -27,7 +27,7 @@ bun dev
 | Template | Description |
 |----------|-------------|
 | `starter-solid` | Solid.js + Vite with Atoms + Streams |
-| `starter-react` | React + Vite with Query/Exec/Stream |
+| `starter-react` | React + Vite with Atoms + Streams |
 | `starter-sqlc` | Solid.js + Vite + sqlc (SQLite database) |
 
 ## What's Included
