@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "gen": "go run tygor.dev/cmd/tygor@latest gen ./src/rpc",
+    "gen": "go mod download && go run tygor.dev/cmd/tygor@latest gen ./src/rpc",
     "postinstall": "bun run gen",
     "dev": "vite --clearScreen false",
     "build": "vite build",
