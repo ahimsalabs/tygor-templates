@@ -15,7 +15,7 @@ import (
 
 // In-memory task store (slice preserves creation order)
 var (
-	tasks   []*Task
+	tasks   = []*Task{}
 	nextID  = 1
 	tasksMu sync.RWMutex
 )
